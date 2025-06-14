@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simplified Storybook AI</title>
+    <!-- Tailwind CSS CDN for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f2f5;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start; /* Align to start to prevent extreme centering on small content */
+            min-height: 100vh;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .container {
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            width: 100%;
+            max-width: 900px;
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+            border-radius: 8px;
+            padding: 12px;
+            border: 1px solid #d1d5db;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        textarea:focus {
+            border-color: #6366f1; /* Tailwind indigo-500 */
+        }
+        button {
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s, box-shadow 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        button:hover {
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        .primary-button {
+            background-color: #6366f1; /* Tailwind indigo-500 */
+            color: white;
+        }
+        .primary-button:hover {
+            background-color: #4f46e5; /* Tailwind indigo-600 */
+        }
+        .story-output {
+            background-color: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 15px;
+            min-height: 150px;
+            max-height: 500px;
+            overflow-y: auto;
+            white-space: pre-wrap; /* Preserves whitespace and wraps text */
+            word-wrap: break-word; /* Breaks long words */
+            line-height: 1.6;
+            color: #374151;
+        }
+        .loading-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #6366f1;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-3xl font-bold text-center text-gray-800">Simplified Storybook AI</h1>
+
+        <!-- Character Definition Section -->
+        <div class="character-definition-section bg-indigo-50 p-6 rounded-lg">
+            <h2 class="text-2xl font-semibold text-gray-700 mb-4">1. Define Your Characters</h2>
+            <p class="text-gray-600 mb-4">
+                Provide a brief description for each character. Think about their personality, habits, and any key traits.
+                The AI will generalize their character from this input.
+            </p>
+            <div class="mb-4">
+                <label for="characterInput" class="block text-gray-700 text-sm font-bold mb-2">
+                    Character Descriptions (e.g., "John is always late, loves coffee, and talks about tech. Jane is quiet, enjoys reading, and often helps others.")
+                </label>
+                <textarea id="characterInput" class="w-full text-gray-800" placeholder="Enter character descriptions here..."></textarea>
+            </div>
+            <button id="createCharactersBtn" class="primary-button w-full">
+                <span id="charBtnText">Analyze Characters</span>
+                <div id="charSpinner" class="loading-spinner hidden"></div>
+            </button>
+
+            <div id="characterOutput" class="story-output mt-4 hidden">
+                <p class="text-gray-700 font-semibold mb-2">Generated Character Profiles:</p>
+                <p id="charProfilesText" class="text-gray-800"></p>
+            </div>
+        </div>
+
+        <!-- Story Development Section -->
+        <div class="story-development-section bg-purple-50 p-6 rounded-lg">
+            <h2 class="text-2xl font-semibold text-gray-700 mb-4">2. Develop Your Story</h2>
+            <p class="text-gray-600 mb-4">
+                Enter a starting prompt for your story. The AI will continue the narrative,
+                incorporating the characters you've defined.
+            </p>
+            <div class="mb-4">
+                <label for="storyPromptInput" class="block text-gray-700 text-sm font-bold mb-2">
+                    Story Prompt (e.g., "John and Jane meet at a cafe on a rainy Tuesday morning.")
+                </label>
+                <textarea id="storyPromptInput" class="w-full text-gray-800" placeholder="Start your story here..."></textarea>
+            </div>
+            <button id="continueStoryBtn" class="primary-button w-full" disabled>
+                <span id="storyBtnText">Continue Story</span>
+                <div id="storySpinner" class="loading-spinner hidden"></div>
+            </button>
+
+            <div id="storyOutput" class="story-output mt-4">
+                <p class="text-gray-700 font-semibold mb-2">Story Progress:</p>
+                <p id="storyText" class="text-gray-800"></p>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        const characterInput = document.getElementById('characterInput');
+        const createCharactersBtn = document.getElementById('createCharactersBtn');
+        const charBtnText = document.getElementById('charBtnText');
+        const charSpinner = document.getElementById('charSpinner');
+        const characterOutput = document.getElementById('characterOutput');
+        const charProfilesText = document.getElementById('charProfilesText');
+
+        const storyPromptInput = document.getElementById('storyPromptInput');
+        const continueStoryBtn = document.getElementById('continueStoryBtn');
+        const storyBtnText = document.getElementById('storyBtnText');
+        const storySpinner = document.getElementById('storySpinner');
+        const storyOutput = document.getElementById('storyOutput');
+        const storyText = document.getElementById('storyText');
+
+        let characterProfiles = ""; // Stores the AI-generated character profiles
+        let chatHistory = [];       // Stores the ongoing story conversation for the LLM
+
+        // API Key will be automatically provided by the Canvas environment if empty string.
+        const apiKey = "";
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+        // Function to make API calls to the Gemini LLM
+        async function callGeminiAPI(prompt, currentChatHistory = []) {
+            let historyToSend = [...currentChatHistory];
+            historyToSend.push({ role: "user", parts: [{ text: prompt }] });
+
+            const payload = { contents: historyToSend };
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    console.error('API Error Response:', errorData);
+                    throw new Error(`HTTP error! status: ${response.status} - ${errorData.error?.message || 'Unknown error'}`);
+                }
+
+                const result = await response.json();
+                if (result.candidates && result.candidates.length > 0 &&
+                    result.candidates[0].content && result.candidates[0].content.parts &&
+                    result.candidates[0].content.parts.length > 0) {
+                    const text = result.candidates[0].content.parts[0].text;
+                    historyToSend.push({ role: "model", parts: [{ text: text }] }); // Add model's response to history
+                    return text;
+                } else {
+                    console.error('Unexpected API response structure:', result);
+                    return "Sorry, I couldn't generate a response based on the current input.";
+                }
+            } catch (error) {
+                console.error('Error calling Gemini API:', error);
+                return `Error: ${error.message}. Please try again.`;
+            }
+        }
+
+        // --- Character Generation Logic ---
+        createCharactersBtn.addEventListener('click', async () => {
+            const description = characterInput.value.trim();
+            if (!description) {
+                charProfilesText.textContent = "Please enter character descriptions.";
+                characterOutput.classList.remove('hidden');
+                return;
+            }
+
+            charBtnText.textContent = "Analyzing...";
+            charSpinner.classList.remove('hidden');
+            createCharactersBtn.disabled = true;
+            characterOutput.classList.remove('hidden');
+            charProfilesText.textContent = "Generating character profiles...";
+
+            const prompt = `Based on the following user-provided descriptions of individuals, generalize their character traits, habits, and personalities. Structure the output clearly for each person.
+User Descriptions:
+"${description}"`;
+
+            try {
+                const aiResponse = await callGeminiAPI(prompt);
+                characterProfiles = aiResponse; // Store the generated profiles
+                charProfilesText.textContent = characterProfiles;
+                continueStoryBtn.disabled = false; // Enable story button after characters are defined
+                chatHistory = [
+                    { role: "user", parts: [{ text: `Here are the character profiles for our story:\n${characterProfiles}` }] },
+                    { role: "model", parts: [{ text: "Understood. I am ready to help create a story with these characters." }] }
+                ];
+            } catch (error) {
+                charProfilesText.textContent = `Failed to generate character profiles: ${error.message}`;
+                console.error("Character generation error:", error);
+            } finally {
+                charBtnText.textContent = "Analyze Characters";
+                charSpinner.classList.add('hidden');
+                createCharactersBtn.disabled = false;
+            }
+        });
+
+        // --- Story Development Logic ---
+        continueStoryBtn.addEventListener('click', async () => {
+            let userPrompt = storyPromptInput.value.trim();
+            if (!userPrompt && chatHistory.length <= 2) { // Only require initial prompt
+                storyText.textContent = "Please enter an initial story prompt.";
+                return;
+            }
+
+            storyBtnText.textContent = "Generating...";
+            storySpinner.classList.remove('hidden');
+            continueStoryBtn.disabled = true;
+
+            const fullPrompt = userPrompt ? userPrompt : "Continue the story naturally. Focus on character interactions and narrative progression.";
+
+            try {
+                const aiResponse = await callGeminiAPI(fullPrompt, chatHistory);
+                // Update the chatHistory with the new exchange
+                chatHistory.push({ role: "user", parts: [{ text: fullPrompt }] });
+                chatHistory.push({ role: "model", parts: [{ text: aiResponse }] });
+
+                storyText.textContent += (storyText.textContent ? "\n\n" : "") + (userPrompt ? `You: ${userPrompt}\n` : "") + aiResponse;
+                storyOutput.scrollTop = storyOutput.scrollHeight; // Scroll to bottom
+                storyPromptInput.value = ''; // Clear input after use
+            } catch (error) {
+                storyText.textContent += (storyText.textContent ? "\n\n" : "") + `Failed to continue story: ${error.message}`;
+                console.error("Story generation error:", error);
+            } finally {
+                storyBtnText.textContent = "Continue Story";
+                storySpinner.classList.add('hidden');
+                continueStoryBtn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
